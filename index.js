@@ -130,7 +130,11 @@ async function getRemoteSecret(domain, alg, kid, cache) {
 }
 
 function getSecret(request, reply, cb) {
-  const decoded = request.jwtDecode({ complete: true })
+  const decoded = request.jwtDecode({
+    decode: {
+      complete: true
+    }
+  })
 
   // The token is invalid, fastify-jwt will take care of it. For now return a empty key
   if (!decoded) {
@@ -148,20 +152,6 @@ function getSecret(request, reply, cb) {
   getRemoteSecret(request.auth0Verify.domain, header.alg, header.kid, request.auth0VerifySecretsCache)
     .then(key => cb(null, key))
     .catch(cb)
-}
-
-function jwtDecode(options = {}) {
-  if (!this.headers || !this.headers.authorization) {
-    throw new Unauthorized(errorMessages.missingHeader)
-  }
-
-  const authorization = this.headers.authorization
-
-  if (!authorization.match(/^Bearer\s+/)) {
-    throw new Unauthorized(errorMessages.badHeaderFormat)
-  }
-
-  return jwt.decode(authorization.split(/\s+/)[1].trim(), options)
 }
 
 async function authenticate(request, reply) {
@@ -199,7 +189,6 @@ function fastifyAuth0Verify(instance, options, done) {
     instance.decorateRequest('auth0Verify', {
       getter: () => auth0Options
     })
-    instance.decorateRequest('jwtDecode', jwtDecode)
 
     const cache =
       ttl > 0 ? new NodeCache({ stdTTL: ttl }) : { get: () => undefined, set: () => false, close: () => undefined }
